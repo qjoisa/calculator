@@ -11,52 +11,65 @@ import (
 
 func main() {
 	fmt.Print("Ведите выражение: ")
-	reader := bufio.NewReader(os.Stdin)
-	var expression string
-	expression, _ = reader.ReadString('\n')
-	expression = strings.TrimSuffix(expression, "\n")
-	expression = strings.TrimSuffix(expression, "\r")
-	err := start(expression)
+	expression := inputExpression()
+	a, b, operator, err := breakingIntoParts(expression)
 	if err != nil {
-		fmt.Println(err)
+		printError(err)
+	}
+	err = printResult(a, b, operator)
+	if err != nil {
+		printError(err)
 	}
 }
 
-func start(expression string) error {
+func inputExpression() string {
+	reader := bufio.NewReader(os.Stdin)
+	var expression string
+	expression, _ = reader.ReadString('\n')
+	expression = strings.TrimSpace(expression)
+	return expression
+}
+
+func breakingIntoParts(expression string) (string, string, string, error) {
 	var elements []string = strings.Split(expression, " ")
 	if len(elements) > 3 {
-		return errors.New("Вывод ошибки, так как формат математической операции не удовлетворяет заданию — два операнда и один оператор (+, -, /, *).")
+		return "", "", "", errors.New("Вывод ошибки, так как формат математической операции не удовлетворяет заданию — два операнда и один оператор (+, -, /, *).")
 	} else if len(elements) < 3 {
-		return errors.New("Вывод ошибки, так как строка не является математической операцией.")
+		return "", "", "", errors.New("Вывод ошибки, так как строка не является математической операцией.")
 	}
-	if resultArabic, resultRoman, err := calculateExpression(elements); resultRoman != "" {
+
+	return strings.ToUpper(elements[0]), strings.ToUpper(elements[2]), strings.ToUpper(elements[1]), nil
+}
+
+func printResult(a, b, operator string) error {
+	if resultArabic, resultRoman, err := calculateExpression(a, b, operator); resultRoman != "" {
 		fmt.Println(resultRoman)
 	} else if resultRoman == "" && err == nil {
 		fmt.Println(resultArabic)
 	} else {
-		fmt.Println(err)
+		return err
 	}
 	return nil
 }
-func calculateExpression(elements []string) (int, string, error) {
+func calculateExpression(first, second, operator string) (int, string, error) {
 	aIsRomanNumeral := false
 	bIsRomanNumeral := false
 	aIsInt := false
 	bIsInt := false
 	var a, b int
-	a, aIsInt = isInt(elements[0])
-	b, bIsInt = isInt(elements[2])
+	a, aIsInt = isInt(first)
+	b, bIsInt = isInt(second)
 	if aIsInt && bIsInt {
-		if result, err := calculate(a, b, elements[1]); err == nil {
+		if result, err := calculate(a, b, operator); err == nil {
 			return result, "", nil
 		} else {
 			return 0, "", err
 		}
 	}
-	a, aIsRomanNumeral = isRomanNumeral(elements[0])
-	b, bIsRomanNumeral = isRomanNumeral(elements[2])
+	a, aIsRomanNumeral = isRomanNumeral(first)
+	b, bIsRomanNumeral = isRomanNumeral(second)
 	if aIsRomanNumeral && bIsRomanNumeral {
-		if result, err := calculate(a, b, elements[1]); err == nil && result > 0 {
+		if result, err := calculate(a, b, operator); err == nil && result > 0 {
 			return 0, arabicToRoman(result), nil
 		} else if result < 0 {
 			return 0, "", errors.New("Вывод ошибки, так как в римской системе нет отрицательных чисел.")
@@ -198,5 +211,11 @@ func numeralsWithinTen(inTen int) string {
 		return "X"
 	default:
 		return ""
+	}
+}
+
+func printError(err error) {
+	if err != nil {
+		fmt.Println(err)
 	}
 }
